@@ -57,13 +57,14 @@ export default {
         }
     }),
     methods: {
-        /** подготовить данные для виртуализации */
+        /* prepare data for virtualization */
         prepareVirtualization (force = true) {
             if (this.useVirtualization) {
                 if (!this.virt?.chunks?.length || force) {
                     const chunkSize = 20
                     const chunks = []
 
+                    /* split array into chunks */
                     for (let i = 0; i < Math.ceil(this.data.length / chunkSize); i++) {
                         chunks[i] = this.data.slice((i * chunkSize), (i * chunkSize) + chunkSize)
                     }
@@ -86,9 +87,9 @@ export default {
             }
         },
 
-        /* обработчик события скролла ВНИЗ */
+        /* scroll DOWN event handler */
         infiniteHandlerBttm ($state) {
-            // перехватчик, который устанавливает верное значение индекса при смене направления скроллинга
+            /* interceptor to set index value, after changing scroll direction */
             const index =
                 this.virt.chunkIndex.dir === 'top' &&
                 (this.virt.chunkIndex.index > 2 ||
@@ -96,7 +97,7 @@ export default {
                     ? this.virt.chunkDisplay?.slice(-1) + 1
                     : this.virt.chunkIndex.index
 
-            // проверка на наличие чанка
+            /* chunk availability check */
             if (
                 !this.virt.chunks[index].length ||
                 (this.searching &&
@@ -104,30 +105,29 @@ export default {
             ) {
                 $state.complete()
             } else {
-                // проверка на каждый x10 чанк
+                /* every n10 chunk check */
                 if (index !== 0 && index % 10 === 0) {
-                    this.virt.data.splice(0, this.virt.chunkSize * 10) // убираем 10 предыдущих чанков из даты
-                    this.virt.chunkDisplay.splice(0, 10) // убираем индексы чанков из списка UI
-                    // устанавливаем позицию скролла
-                    this.$refs.infiniteLoadingBttm.scrollParent.scrollTop = 10
-                    this.$refs.infiniteLoadingTop.stateChanger.reset() // перезагружаем обработчик скроллинга вверх
+                    this.virt.data.splice(0, this.virt.chunkSize * 10) // remove 10 previous chunks from data
+                    this.virt.chunkDisplay.splice(0, 10) // remove chunk indexes from UI list
+                    this.$refs.infiniteLoadingBttm.scrollParent.scrollTop = 10 // set scroll position
+                    this.$refs.infiniteLoadingTop.stateChanger.reset() // refresh scroll UP event handler
                 }
 
-                // добавяем селекторы
+                /* adding selected lines */
                 if (this.selectedAll) {
                     this.$refs.table.selection.push(...this.virt.chunks[index])
                 }
 
-                // проверка на отсутствие индекса чанка в списке чанков отображенных в UI
+                /* check if index does't exist in the list of displayed chunks */
                 if (
                     index &&
                     !this.virt.chunkDisplay.find((item) => item === index)
                 ) {
-                    this.virt.data.push(...this.virt.chunks[index]) // вставляем чанк в конец даты
-                    this.virt.chunkDisplay.push(index) // всавляем индекс чанка в конец списка чанков в UI
+                    this.virt.data.push(...this.virt.chunks[index]) // add chunk to end of data
+                    this.virt.chunkDisplay.push(index) // paste chunk index to end of chunk list displayed
                 }
 
-                // обновляем данные индекса чанка для последующего вызова обработчика
+                /* update chunk index data for next call of handler */
                 this.virt.chunkIndex = {
                     dir: 'bttm',
                     index: index + 1
@@ -137,9 +137,9 @@ export default {
             }
         },
 
-        /* обработчик события скролла ВВЕРХ */
+        /* scroll UP event handler */
         infiniteHandlerTop ($state) {
-            // перехватчик, который устанавливает верное значение индекса при смене направления скроллинга
+            /* interceptor to set index value, after changing scroll direction */
             const index =
                 this.virt.chunkIndex.dir !== 'top' &&
                 this.virt.chunkIndex.index > 2
@@ -147,42 +147,42 @@ export default {
                     : this.virt.chunkIndex.index
 
             if (this.virt.chunks?.length) {
-                // проверка на наличие чанка
+                /* chunk availability check */
                 if (!this.virt.chunks[index].length) {
                     $state.complete()
                 } else {
-                    // проверка на НЕ первичный запуск обработчика
+                    /* check this is NOT first launch of handler */
                     if (
                         index > 1 ||
                         (index >= 0 && this.virt.chunkIndex.dir === 'top')
                     ) {
-                        // проверка на каждый n9 чанк
+                        /* every n9 chunk check */
                         if (index % 10 === 9) {
-                            this.virt.data.splice(0, this.virt.data.length) // чистим стэк чанков
-                            this.virt.chunkDisplay.splice(0, 10) // чистим список чанков в UI
-                            // настраиваем позицию скролла
+                            this.virt.data.splice(0, this.virt.data.length) // remove chunks stack
+                            this.virt.chunkDisplay.splice(0, 10) // remove chunk indexes from UI list
+                            /* set scroll position */
                             this.$refs.infiniteLoadingTop.scrollParent.scrollTop =
                                 this.$refs.infiniteLoadingTop.scrollParent
                                     .offsetHeight * 4.5
                         }
 
-                        // проверка на отсутствие индекса чанка в списке чанков отображенных в UI
+                        /* check if index does't exist in the list of displayed chunks */
                         if (
                             !this.virt.chunkDisplay.find(
                                 (item) => item === index
                             )
                         ) {
-                            // вставляем чанк в начало даты
+                            /* add chunk to the beginning of the data */
                             this.virt.data.unshift(
                                 ...this.virt.chunks[index < 0 ? 0 : index]
                             )
-                            // вставляем индекс чанка в начало списка чанков в UI
+                            /* paste chunk index to the beginning of chunk list displayed */
                             this.virt.chunkDisplay.unshift(
                                 index < 0 ? 0 : index
                             )
 
-                            // костыль для удаления повторяющегося значения дисплея нулевого чанка,
-                            // появляющегося из-за двойного вызова этого обработчика при создании таблицы.
+                            /* hack to delete repeatable display value of zero chunk,
+                               which appears due to double call of handler during table creation */
                             if (
                                 this.virt.data?.length ===
                                     this.virt.chunkSize &&
@@ -193,24 +193,24 @@ export default {
                             }
                         }
 
-                        // добавяем селекторы
+                        /* adding selected lines */
                         if (this.selectedAll) {
                             this.$refs.table.selection.unshift(
                                 ...this.virt.chunks[index]
                             )
                         }
 
-                        // обновляем данные индекса чанка для последующего вызова обработчика
+                        /* update chunk index data for next call of handler */
                         this.virt.chunkIndex = {
                             dir: 'top',
                             index: index - 1
                         }
-                        // проверка на первичный запуск обработчика
+                    /* IF it is FIRST launch of handler */
                     } else {
-                        // первичная подгрузка данных в таблицу
+                        /* first upload of data into table */
                         this.virt.data.push(...this.virt.chunks[index])
 
-                        // всавляем индекс чанка в конец списка чанков в UI
+                        /* paste chunk index to end of chunk list displayed */
                         if (
                             !(index <= 0) &&
                             !this.virt.chunkDisplay.find(
@@ -220,7 +220,7 @@ export default {
                             this.virt.chunkDisplay.push(index)
                         }
 
-                        // обновляем данные индекса чанка для последующего вызова обработчика
+                        /* update chunk index data for next call of handler */
                         this.virt.chunkIndex = {
                             dir: 'bttm',
                             index: index + 1
